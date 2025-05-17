@@ -10,25 +10,35 @@ use rustc_session::declare_lint_pass;
 declare_clippy_lint! {
     /// ### What it does
     ///
-    /// Detects cases where a `&dyn Any` is constructed directly referencing a `Box<dyn Any>` or
-    /// other value that dereferences to `dyn Any`.
+    /// Protects against an unintended coercion of references to container types to `&dyn Any`
+    /// when the container type dereferences to a `dyn Any` which could be reborrowed instead.
     ///
     /// ### Why is this bad?
     ///
-    /// The intention is usually to borrow the `dyn Any` available by dereferencing the value,
-    /// rather than the value itself.
+    /// The intention is usually to get a reference to the `dyn Any` the value derefernces to,
+    /// rather than getting a `&dyn Any` which is actually referring to the outer container type.
     ///
     /// ### Example
+    /// 
+    /// Here we see that because `Box<dyn Any>` itself implements `Any`, `&Box<dyn Any>`
+    /// gets coerced to an `&dyn Any` which refers to *the `Box` itself`*, rather than the
+    /// inner `dyn Any`.
     /// ```no_run
     /// # use std::any::Any;
-    /// let x: Box<dyn Any> = Box::new(());
-    /// let _: &dyn Any = &x;
+    /// let x: Box<dyn Any> = Box::new(0u32);
+    /// let dyn_any_of_box: &dyn Any = &x;
+    ///
+    /// // Fails as we have a &dyn Any to the Box, not the u32
+    /// assert_eq!(dyn_any_of_box.downcast_ref::<u32>(), None);
     /// ```
     /// Use instead:
     /// ```no_run
     /// # use std::any::Any;
-    /// let x: Box<dyn Any> = Box::new(());
-    /// let _: &dyn Any = &*x;
+    /// let x: Box<dyn Any> = Box::new(0u32);
+    /// let dyn_any_of_u32: &dyn Any = &*x;
+    /// 
+    /// // Succeeds sincwe have a &dyn Any to the inner u32!
+    /// assert_eq!(dyn_any_of_u32.downcast_ref::<u32>(), Some(&0u32));
     /// ```
     #[clippy::version = "1.88.0"]
     pub COERCE_ANY_REF_TO_ANY,
