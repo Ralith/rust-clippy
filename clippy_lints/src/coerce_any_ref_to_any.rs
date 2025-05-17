@@ -10,7 +10,7 @@ use rustc_session::declare_lint_pass;
 declare_clippy_lint! {
     /// ### What it does
     ///
-    /// Protects against an unintended coercion of references to container types to `&dyn Any`
+    /// Protects against unintended coercion of references to container types to `&dyn Any`
     /// when the container type dereferences to a `dyn Any` which could be reborrowed instead.
     ///
     /// ### Why is this bad?
